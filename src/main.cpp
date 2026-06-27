@@ -32,27 +32,22 @@ int main() {
     if (entity001_pos) LDEBUG("x{:.2f} y{:.2f}", entity001_pos->x, entity001_pos->y);
 
     // r.get_pool<PositionComponent>()._debug_dump();
+    LINFO("query:");
     {
-        for (const Entity e : r.view<PositionComponent, Exclude<A>>()) {
-            auto c = r.get_component<PositionComponent>(e);
-            if (!c) {
-                LERR("wtf why c == nullptr???");
-                continue;
-            }
+        for (auto pair : r.view<PositionComponent, Exclude<A>>()) {
+            auto& c = pair.get<PositionComponent>();
 
-            LINFO("id{}: x{:.2f} y{:.2f}", e, c->x, c->y);
+            LINFO("  id{}: x{:.2f} y{:.2f}", pair.e, c.x, c.y);
         }
     }
+    LINFO("added component A");
     r.emplace_component<A>(entity001);
+    LINFO("query:");
     {
-        for (const Entity e : r.view<PositionComponent, Exclude<A>>()) {
-            auto c = r.get_component<PositionComponent>(e);
-            if (!c) {
-                LERR("wtf why c == nullptr???");
-                continue;
-            }
+        for (auto pair : r.view<PositionComponent, Exclude<A>>()) {
+            auto& c = pair.get<PositionComponent>();
 
-            LINFO("{}: x{:.2f} y{:.2f}", e, c->x, c->y);
+            LINFO("  id{}: x{:.2f} y{:.2f}", pair.e, c.x, c.y);
         }
     }
 }
