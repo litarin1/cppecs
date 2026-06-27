@@ -73,31 +73,39 @@ class BaseRegistry {
             });
         }
 
-        // 1. сделать тупо, без плюсов
-        // 2. переписать match и сделать два типа на Iterator: один умный со своим match(), другой тупо хранитель end()
+        struct StupidIterator {
+            const std::vector<Entity>::const_iterator m_iter;
+
+            // public:
+            constexpr StupidIterator(std::vector<Entity>::const_iterator iterator) : m_iter(iterator) {}
+            constexpr bool operator==(const StupidIterator other) const { return m_iter == other.m_iter; }
+        };
+
         class Iterator {
             View<Filters...>& m_view;
             std::vector<Entity>::iterator m_iter;
 
         public:
             struct pair {
-                const Entity e;
-                Includes components;
+                const Includes components;
+                const Entity entity;
 
                 template <class Component>
-                Component& get() {
+                const Component& get() const {
                     return std::get<Component>(components);
                 }
+
+                constexpr pair(const Entity entity, const Includes components) : entity(entity), components(components) {}
             };
 
-            constexpr bool operator==(const Iterator& other) const { return m_iter == other.m_iter; }
+            constexpr bool operator==(const StupidIterator& other) const { return m_iter == other.m_iter; }
 
             constexpr Iterator& operator++() {
                 m_iter++;
-                check();
+                check_or_increment();
                 return *this;
             }
-            constexpr void check() {
+            constexpr void check_or_increment() {
                 while (m_iter != m_view.m_array->end()) {
                     if (m_view._match(*m_iter)) break;
                     m_iter++;
@@ -114,18 +122,22 @@ class BaseRegistry {
             constexpr Iterator(View<Filters...>& view, std::vector<Entity>::iterator iterator) : m_view(view), m_iter(iterator) {}
         };
 
-        constexpr bool empty() const { return m_array == nullptr; }
+        constexpr bool empty() const { return m_array == nullptr || cbegin_stupid() == end(); }
 
         constexpr Iterator begin() {
-            if (empty()) return Iterator(*this, std::vector<Entity>::iterator(0));
+            if (m_array == nullptr) return Iterator(*this, std::vector<Entity>::iterator(0));
             Iterator out{*this, m_array->begin()};
-            out.check();
+            out.check_or_increment();
             return out;
         }
-        using StupidIterator = Iterator;
-        constexpr StupidIterator end() {
-            if (empty()) return Iterator(*this, std::vector<Entity>::iterator(0));
-            return Iterator(*this, m_array->end());
+        // using StupidIterator = Iterator;
+        constexpr const StupidIterator end() const {
+            if (m_array == nullptr) return {std::vector<Entity>::const_iterator(0)};
+            return {m_array->cend()};
+        }
+        constexpr const StupidIterator cbegin_stupid() const {
+            if (m_array == nullptr) return {std::vector<Entity>::const_iterator(0)};
+            return {m_array->cbegin()};
         }
     };
 
